@@ -1,0 +1,16 @@
+{
+  "fullname":"Rohit G Sharma",
+  "email":"sharma@gmail.com",
+  "phone":"9765925789",
+  "profilepic":"Cuie",
+  "bio":"GOAT"
+}
+{
+ "name":"Bookstore webapp",
+  "category":"Website-based",
+  "video":"https://i.ytimg.com/vi/7l5UgtWfnw0/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAmy-IpIDVTZmmdKaomQlObqfrNTQ",
+  "images":"https://img.freepik.com/premium-vector/book-app-isometric-concept-landing-page_220346-67.jpg?ga=GA1.1.1042404616.1705058647&semt=ais_hybrid",
+  "technology":"MERN STACK",
+  "prerequisites":"HTML, CSS, JS",
+  "positions":"Web developer, Backend developer"
+}
