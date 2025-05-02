@@ -10,24 +10,40 @@ const authSlice = createSlice({
     user: storedUser || null, // Initialize user from localStorage
   },
   reducers: {
-    // Action to set loading state
+    // Set loading state
     setLoading: (state, action) => {
       state.loading = action.payload;
     },
-    // Action to set user and persist to localStorage
+
+    // Set user and persist to localStorage
     setUser: (state, action) => {
-      state.user = action.payload;
       if (action.payload) {
-        // Save user to localStorage
-        localStorage.setItem("user", JSON.stringify(action.payload));
+        state.user = {
+          ...action.payload,
+          role: action.payload.role || state.user?.role || "user", // Ensure role is stored
+        };
+        localStorage.setItem("user", JSON.stringify(state.user));
       } else {
-        // Remove user from localStorage (for logout)
-        localStorage.removeItem("user");
+        state.user = null;
+        localStorage.removeItem("user"); // Remove user if null (logout)
+      }
+    },
+
+    // Update user profile, ensuring role is not lost
+    updateUserProfile: (state, action) => {
+      if (state.user) {
+        state.user = {
+          ...state.user,
+          profile: {
+            ...state.user.profile,
+            ...action.payload, // Merge updated profile fields
+          },
+        };
+        localStorage.setItem("user", JSON.stringify(state.user)); // Persist to localStorage
       }
     },
   },
 });
 
-export const { setLoading, setUser } = authSlice.actions;
-
+export const { setLoading, setUser, updateUserProfile } = authSlice.actions;
 export default authSlice.reducer;

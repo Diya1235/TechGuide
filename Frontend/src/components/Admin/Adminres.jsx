@@ -10,19 +10,25 @@ import {
   TableCell,
 } from "../ui/table";
 import useGetAllResumeTemplates from "@/hooks/useGetAllResumeTemplates";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Popover } from "@radix-ui/react-popover";
 import { PopoverContent, PopoverTrigger } from "../ui/popover";
 import { DeleteIcon, Edit2, MoreHorizontal, X } from "lucide-react";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
+import { RESUME_API_END_POINT } from "@/utils/Constant";
+import { setresumeTemplates } from "@/redux/templateSlice";
+import axios from "axios";
+import { toast } from "sonner";
 
 const Adminres = () => {
   useGetAllResumeTemplates();
   const { resumeTemplates } = useSelector((store) => store.templates);
+  console.log(resumeTemplates)
 
   const [selectedImage, setSelectedImage] = useState(null);
+  const dispatch = useDispatch();
 
   const openImageDialog = (image) => {
     setSelectedImage(image);
@@ -32,18 +38,44 @@ const Adminres = () => {
     setSelectedImage(null);
   };
   const navigate = useNavigate();
+ const [filterTemplates, setFilterTemplates] = useState([]);
+  const handleDelete = async (templateId) => {
+    if (!window.confirm("Are you sure you want to delete this project?")) return;
+
+    try {
+        const res = await axios.delete(`${RESUME_API_END_POINT}/deleteTemplate/${templateId}`, {
+            headers: { "Content-Type": "application/json" },
+            withCredentials: true,
+        });
+
+        if (res.data.success) {
+            toast.message("Template deleted successfully!");
+
+            // ✅ Update state and Redux store without re-fetching
+            const updatedTemplate = resumeTemplates.filter((template) => template._id !== templateId);
+            dispatch(setresumeTemplates(updatedTemplate));
+            setFilterTemplates(updatedTemplate); // ✅ Update local state
+        } else {
+            toast.error("Failed to delete template: " + res.data.message);
+        }
+    } catch (error) {
+        console.error("Error deleting template:", error.response?.data || error.message);
+        toast.error("Error deleting template. Please try again.");
+    }
+};
+
 
   return (
     <>
       <Navbar />
       <div className="flex justify-end my-5 mr-7">
-  <Button
-    className="bg-blue-500"
-    onClick={() => navigate("/admin/createResumeTemp")}
-  >
-    New template
-  </Button>
-</div>
+        <Button
+          className="bg-blue-500"
+          onClick={() => navigate("/admin/createResumeTemp")}
+        >
+          New template
+        </Button>
+      </div>
 
       <div className="mt-7 max-w-7xl mx-auto px-4">
         <Table>
@@ -80,16 +112,19 @@ const Adminres = () => {
 
                 {/* Date & Time */}
                 <TableCell>
-                  {new Date(template?.createdAt).toLocaleString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                    hour12: true,
-                  })}
+                  {template?.createdAt
+                    ? new Date(template.createdAt).toLocaleString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      hour12: true,
+                    })
+                    : "N/A"} {/* Fallback if createdAt is missing */}
                 </TableCell>
+
 
                 {/* Actions */}
                 <TableCell className="text-right cursor-pointer">
@@ -98,8 +133,8 @@ const Adminres = () => {
                       <MoreHorizontal />
                     </PopoverTrigger>
                     <PopoverContent className="w-32">
-                      <div className="flex items-center gap-2 w-fit cursor-pointer">
-                        <DeleteIcon className="w-4" />
+                      <div className='flex items-center gap-2 w-fit cursor-pointer' onClick={() => handleDelete(template._id || template.id)}>
+                        <DeleteIcon className='w-4' />
                         <span>Delete</span>
                       </div>
                     </PopoverContent>

@@ -44,15 +44,15 @@ const AboutUs = () => {
           {/* Statistics */}
           <div className="flex justify-center mt-8 gap-12">
             <div>
-              <h3 className="text-3xl font-bold text-blue-600">27,882</h3>
+              <h3 className="text-3xl font-bold text-blue-600">50+</h3>
               <p className="text-gray-500">Customers</p>
             </div>
             <div>
-              <h3 className="text-3xl font-bold text-blue-600">90%</h3>
+              <h3 className="text-3xl font-bold text-blue-600">70%</h3>
               <p className="text-gray-500">Job Success</p>
             </div>
             <div>
-              <h3 className="text-3xl font-bold text-blue-600">70,592</h3>
+              <h3 className="text-3xl font-bold text-blue-600">200+</h3>
               <p className="text-gray-500">Visits</p>
             </div>
           </div>

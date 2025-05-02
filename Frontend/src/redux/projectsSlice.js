@@ -20,93 +20,90 @@ const projectsSlice = createSlice({
     allProjects: [], // List of all available projects
     singleProject: null, // Details of a single selected project
     savedProjects: [], // List of saved projects for the current user
-    currentUserId: null,
-    allAdminProjects:[] ,
-    searchProjectsByText:"",
-    searchedQuery:""
-    // ID of the currently logged-in user
+    currentUserId: null, // ID of the logged-in user
+    allAdminProjects: [],
+    searchProjectsByText: "",
+    searchedQuery: "",
   },
   reducers: {
-    // Set all projects in the store
-    setallProjects: (state, action) => {
+    setAllProjects: (state, action) => {
       state.allProjects = action.payload;
     },
-
-    // Set details for a single project
     setSingleProject: (state, action) => {
       state.singleProject = action.payload;
     },
-  setAllAdminProjects:(state,action)=>{
-    state.allAdminProjects = action.payload;
-  },
-  setsearchProjectsByText:(state,action)=>{
-    state.searchProjectsByText = action.payload;
-  },
-  setsearchedQuery:(state,action)=>{
-    state.searchedQuery = action.payload;
-  },
-    // Save projects for the current user
-    setsaveProject: (state, action) => {
-      const existingProjects = new Set(state.savedProjects.map((p) => p._id)); // Assuming `_id` is the unique identifier
+    setAllAdminProjects: (state, action) => {
+      state.allAdminProjects = action.payload;
+    },
+    setSearchProjectsByText: (state, action) => {
+      state.searchProjectsByText = action.payload;
+    },
+    setSearchedQuery: (state, action) => {
+      state.searchedQuery = action.payload;
+    },
     
-      // Filter payload to include only valid objects with `_id` properties
-      const validProjects = action.payload.filter((p) => p && p._id);
-    
-      state.savedProjects = [
-        ...state.savedProjects,
-        ...validProjects.filter((p) => !existingProjects.has(p._id)),
-      ];
-    
+    // ✅ Set Saved Projects
+    setSavedProjects: (state, action) => {
+      state.savedProjects = action.payload;
       if (state.currentUserId) {
-        saveProjectsForUser(state.currentUserId, state.savedProjects);
+        saveProjectsForUser(state.currentUserId, action.payload); // Save in localStorage
       }
     },
 
-    // Remove a project from saved projects
+    // ✅ Remove a Saved Project
     removeSavedProject: (state, action) => {
-      const updatedSavedProjects = state.savedProjects.filter((p) => p._id !== action.payload); // Use _id instead of id
+      const updatedSavedProjects = state.savedProjects.filter((p) => p._id !== action.payload);
       state.savedProjects = updatedSavedProjects;
-    
       if (state.currentUserId) {
-        saveProjectsForUser(state.currentUserId, updatedSavedProjects); // Persist in localStorage
+        saveProjectsForUser(state.currentUserId, updatedSavedProjects);
       }
     },
-    
 
-    // Set the current user
+    // ✅ Set the Current User & Fetch Saved Projects from Local Storage
     setCurrentUser: (state, action) => {
       state.currentUserId = action.payload;
       state.savedProjects = getSavedProjectsForUser(action.payload);
     },
 
-    // Clear saved projects when the user logs out
+    // ✅ Clear Saved Projects on Logout
     clearSavedProjects: (state) => {
       state.savedProjects = [];
     },
+    
   },
 });
 
 export const {
-  setallProjects,
+  setAllProjects,
   setSingleProject,
-  setsaveProject,
+  setSavedProjects,
   removeSavedProject,
   setCurrentUser,
   clearSavedProjects,
   setAllAdminProjects,
-  setsearchProjectsByText,
-  setsearchedQuery
+  setSearchProjectsByText,
+  setSearchedQuery,
 } = projectsSlice.actions;
 
-// Thunk to fetch saved projects from the backend
-export const fetchSavedProjects = (userId) => async (dispatch) => {
+// ✅ Corrected Thunk to Fetch Saved Projects
+export const fetchSavedProjects = () => async (dispatch, getState) => {
   try {
-    const response = await axios.get(`${USER_API_END_POINT}`, { withCredentials: true });
+    const { currentUserId } = getState().projects;
+
+    if (!currentUserId) {
+      console.error("No user logged in, cannot fetch saved projects.");
+      return;
+    }
+
+    const response = await axios.get(`${USER_API_END_POINT}/saved-projects`, { withCredentials: true });
 
     if (response.data.success) {
-      const savedProjects = response.data.savedProjects;
-      dispatch(setsaveProject(savedProjects)); // Update the Redux state
-      saveProjectsForUser(userId, savedProjects); // Persist in localStorage
+      const savedProjects = response.data.data;
+      console.log(savedProjects) // Adjusted for correct backend response structure
+      dispatch(setSavedProjects(savedProjects)); // ✅ Update Redux
+      saveProjectsForUser(currentUserId, savedProjects); // ✅ Persist in localStorage
+    } else {
+      console.warn("Failed to fetch saved projects:", response.data.message);
     }
   } catch (error) {
     console.error("Error fetching saved projects:", error.response?.data || error.message);

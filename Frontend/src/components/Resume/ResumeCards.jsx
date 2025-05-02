@@ -51,31 +51,39 @@ const ResumeCards = () => {
         </section>
 
         {/* Resume Cards Section with Dotted Background */}
-        <section className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {resumeTemplates?.map((template) => (
-            <div
-              key={template._id}
-              className="group relative bg-transparent p-6 rounded-lg border border-gray-300 shadow-md hover:border-blue-500 hover:shadow-xl overflow-hidden hover:bg-gradient-to-r hover:from-blue-300 hover:to-blue-400 transition-all duration-300"
-            >
-              <div className="relative bg-white rounded-md p-4 h-full flex items-center justify-center transition-all duration-300">
-                <img
-                  src={template.image} // Dynamically load the image from the template data
-                  alt={template.name} // Template name as alt text
-                  className="w-full h-auto object-cover rounded-md"
-                />
-                
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <button
-                  className="bg-white text-blue-500 px-4 py-2 rounded-lg shadow-lg font-semibold hover:bg-gray-100"
-                  onClick={() => handleStartWithTemplate(template._id)}
-                >
-                  Start with this Template
-                </button>
-              </div>
-            </div>
-          ))}
-        </section>
+        {/* Resume Cards Section with Titles */}
+<section className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+  {resumeTemplates?.map((template) => (
+    <div
+      key={template._id}
+      className="group relative bg-transparent p-6 rounded-lg border border-gray-300 shadow-md hover:border-blue-500 hover:shadow-xl overflow-hidden hover:bg-gradient-to-r hover:from-blue-300 hover:to-blue-400 transition-all duration-300"
+    >
+      <div className="relative bg-white rounded-md p-4 h-full flex flex-col items-center justify-center transition-all duration-300">
+        {/* Template Image */}
+        <img
+          src={template.image} 
+          alt={template.name} 
+          className="w-full h-auto object-cover rounded-md"
+        />
+        {/* Template Title */}
+        <p className="mt-4 text-lg font-semibold text-gray-800 text-center">
+          {template.name}
+        </p>
+      </div>
+
+      {/* Hover Overlay with Start Button */}
+      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <button
+          className="bg-white text-blue-500 px-4 py-2 rounded-lg shadow-lg font-semibold hover:bg-gray-100"
+          onClick={() => handleStartWithTemplate(template._id)}
+        >
+          Start with this Template
+        </button>
+      </div>
+    </div>
+  ))}
+</section>
+
       </div>
     </>
   );

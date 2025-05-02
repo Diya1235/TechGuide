@@ -6,10 +6,19 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../shared/Navbar";
 import TemplateA from "./TemplatesPreview/TemplateA";
+import TemplateB from "./TemplatesPreview/TemplateB";
 import { COVERLETTER_API_END_POINT } from "@/utils/Constant";
 import { setCoverletter } from "@/redux/templateSlice";
 import { Button } from "../ui/button";
 import { Pen } from "lucide-react";
+import TemplateC from "./TemplatesPreview/TemplateC";
+import TemplateD from "./TemplatesPreview/TemplateD";
+import TemplateE from "./TemplatesPreview/TemplateE";
+import TemplateF from "./TemplatesPreview/TemplateF";
+import TemplateG from "./TemplatesPreview/TemplateG";
+import TemplateH from "./TemplatesPreview/TemplateH";
+import TemplateI from "./TemplatesPreview/TemplateI";
+import TemplateJ from "./TemplatesPreview/TemplateJ";
 
 const DisplayCoverletter = () => {
     const { id } = useParams();
@@ -18,16 +27,32 @@ const DisplayCoverletter = () => {
     const dispatch = useDispatch();
     const { displetter } = useSelector((store) => store.templates) || { displetter: {} };
     const navigate = useNavigate();
-  
+
+    // Template mapping
+    const templateComponents = {
+        "67c395edf7c10af554a40ef0": TemplateA,
+        "67c39617f7c10af554a40ef4": TemplateB,
+        "68020648dc4d36d52a06d011":TemplateC,
+        "6802066bdc4d36d52a06d017":TemplateD,
+        "6802069cdc4d36d52a06d01d":TemplateE,
+        "680206badc4d36d52a06d023":TemplateF,
+        "680206cddc4d36d52a06d029":TemplateG,
+        "680206e1dc4d36d52a06d02f":TemplateH,
+        "68020703dc4d36d52a06d035":TemplateI,
+        "68039c3c6ad039fe5b91c913":TemplateJ
+    };
+
+    const SelectedTemplate = templateComponents[displetter.templateId];
+
     useEffect(() => {
         const fetchletterById = async () => {
             try {
                 setLoading(true);
-                
-                const res = await axios.get(`${COVERLETTER_API_END_POINT}/getletterbycoverletterid/${id}`, {
+
+                const res = await axios.get(`${COVERLETTER_API_END_POINT}/getCoverLetterById/${id}`, {
                     withCredentials: true,
                 });
-               console.log(res.data)
+
                 if (res.data) {
                     dispatch(setCoverletter(res.data.data));
                 } else {
@@ -68,9 +93,8 @@ const DisplayCoverletter = () => {
             const imgWidth = 210;
             const imgHeight = (content.scrollHeight * imgWidth) / 794;
 
-            // Handling multi-page PDFs
             let yPosition = 0;
-            const pageHeight = 297; // A4 height in mm
+            const pageHeight = 297;
             let remainingHeight = imgHeight;
 
             while (remainingHeight > 0) {
@@ -87,31 +111,33 @@ const DisplayCoverletter = () => {
             console.error("Error generating PDF:", err);
         }
     };
-    const handleBack = ()=>{
+
+    const handleBack = () => {
         navigate("/profile");
-    }
-    const handleEdit = ()=>{
-        navigate("/editCoverletter")
-    }
+    };
+
+    const handleEdit = () => {
+        navigate("/editCoverletter");
+    };
 
     return (
         <>
             <Navbar />
-        
-            <div className="flex justify-between items-center max-w-4xl mx-auto mt-6 px-4">
-        <Button className="bg-blue-500 text-white px-6 py-2 rounded-lg shadow-md" onClick={handleBack}>
-          Back
-        </Button>
 
-        <button
-          onClick={handleEdit}
-          className="bg-black text-white py-2 px-4 rounded-lg shadow-md flex items-center gap-2 hover:bg-gray-800 transition"
-        >
-          <Pen size={16} />
-          Edit
-        </button>
-      </div>
-        
+            <div className="flex justify-between items-center max-w-4xl mx-auto mt-6 px-4">
+                <Button className="bg-blue-500 text-white px-6 py-2 rounded-lg shadow-md" onClick={handleBack}>
+                    Back
+                </Button>
+
+                <button
+                    onClick={handleEdit}
+                    className="bg-black text-white py-2 px-4 rounded-lg shadow-md flex items-center gap-2 hover:bg-gray-800 transition"
+                >
+                    <Pen size={16} />
+                    Edit
+                </button>
+            </div>
+
             <div className="p-4 sm:p-6 md:p-8 bg-white rounded-lg shadow-lg max-w-2xl mx-auto border border-gray-400 mt-5">
                 {loading ? (
                     <p className="text-center text-gray-500">Loading...</p>
@@ -119,15 +145,15 @@ const DisplayCoverletter = () => {
                     <p className="text-center text-red-500">{error}</p>
                 ) : (
                     <div id="cover-letter-content" className="p-6">
-                        {displetter.templateId === "67c395edf7c10af554a40ef0" ? (
-                            <TemplateA formData={displetter} />
-                        ):<p>Not found</p>
-                    }
+                        {SelectedTemplate ? (
+                            <SelectedTemplate formData={displetter} />
+                        ) : (
+                            <p className="text-red-500">Template not found</p>
+                        )}
                     </div>
                 )}
             </div>
 
-            {/* Download Button */}
             <div className="flex justify-end gap-5 mt-5 mb-5 mr-20">
                 <button
                     onClick={handleDownload}

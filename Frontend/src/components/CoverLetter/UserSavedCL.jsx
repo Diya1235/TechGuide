@@ -26,7 +26,7 @@ const UserSavedCL = () => {
     useEffect(() => {
         const fetchUserSavedletters = async () => {
             try {
-                const res = await axios.get(`${COVERLETTER_API_END_POINT}/getcoverletterbyId/${user._id}`, {
+                const res = await axios.get(`${COVERLETTER_API_END_POINT}/getAllCoverLettersByUser/${user._id}`, {
                     withCredentials: true,
                 });
 
@@ -58,7 +58,7 @@ const UserSavedCL = () => {
 
     const handleDelete = async (coverletterId) => {
         try {
-            const res = await axios.delete(`${COVERLETTER_API_END_POINT}/deletecoverletter/${coverletterId}`, {
+            const res = await axios.delete(`${COVERLETTER_API_END_POINT}/deleteCoverLetter/${coverletterId}`, {
                 withCredentials: true,
             });
 

@@ -10,30 +10,31 @@ import useGetAllProjects from '@/hooks/useGetAllProjects';
 const ProjectCard = () => {
   useGetAllProjects(); // Fetch all projects
 
-  const { allProjects } = useSelector((store) => store.projects);
+  const { allProjects = [] } = useSelector((store) => store.projects); // Ensure allProjects is always an array
   const [filterProjects, setFilterProjects] = useState([]); // Stores filtered or all projects
   const [searchText, setSearchText] = useState(''); // Search input state
 
   // Handle project filtering logic
   useEffect(() => {
-    if (searchText.trim()) {
-      // Filter based on searchText
-      const lowercasedQuery = searchText.toLowerCase();
-      const filtered = allProjects.filter((project) => {
-        return (
-          project.title.toLowerCase().includes(lowercasedQuery) ||
-          project.description?.toLowerCase().includes(lowercasedQuery) ||
-          project.category?.toLowerCase().includes(lowercasedQuery) ||
-          project.technologies?.some((tech) => tech.toLowerCase().includes(lowercasedQuery)) ||
-          project.roles?.some((role) => role.toLowerCase().includes(lowercasedQuery))
-        );
-      });
-      setFilterProjects(filtered);
-    } else {
-      // Show all projects when no search query
-      setFilterProjects(allProjects);
-    }
-    console.log(filterProjects);
+    if (!Array.isArray(allProjects)) return; // Ensure allProjects is an array before filtering
+
+    const lowercasedQuery = searchText.toLowerCase().trim();
+    
+    const filtered = lowercasedQuery
+      ? allProjects.filter((project) =>
+          [
+            project.title,
+            project.description,
+            project.category,
+            ...(project.technologies || []),
+            ...(project.roles || []),
+          ]
+            .filter(Boolean) // Remove null/undefined values
+            .some((field) => field.toLowerCase().includes(lowercasedQuery))
+        )
+      : allProjects;
+
+    setFilterProjects(filtered);
   }, [searchText, allProjects]);
 
   return (

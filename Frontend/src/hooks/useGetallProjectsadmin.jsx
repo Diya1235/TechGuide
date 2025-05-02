@@ -1,29 +1,33 @@
 import { setAllAdminProjects } from "@/redux/projectsSlice";
 import { PROJECT_API_END_POINT } from "@/utils/Constant";
 import axios from "axios";
-import React from "react";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 
 const useGetallProjectsadmin = () => {
   const dispatch = useDispatch();
-  useEffect(()=>{
+
+  useEffect(() => {
     const fetchAllAdminProjects = async () => {
       try {
         const res = await axios.get(`${PROJECT_API_END_POINT}/getadminprojects`, {
           withCredentials: true,
         });
-        console.log('API Ressponse:', res.data); // Check if this logs the expected structure
+
+        console.log("API Response:", res.data); // Ensure the structure is correct
+
         if (res.data.success) {
-          dispatch(setAllAdminProjects(res.data.projects)); // Dispatch only the `data` array
+          dispatch(setAllAdminProjects(res.data.projects)); // Dispatch only the `projects` array
+        } else {
+          console.warn("Unexpected response format:", res.data);
         }
       } catch (error) {
-        console.error('API Error:', error.response?.data || error.message);
+        console.error("API Error:", error.response?.data || error.message);
       }
     };
-    
+
     fetchAllAdminProjects();
-  },[])
-}
+  }, [dispatch]); // Added `dispatch` to dependencies
+};
 
 export default useGetallProjectsadmin;

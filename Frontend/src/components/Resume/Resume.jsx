@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Navbar from "../shared/Navbar";
 import Footer from "../Footer";
 import "../Resume/Resume.css";
@@ -15,14 +15,18 @@ import v2 from "../images/write.mp4";
 import { ArrowRightCircleIcon } from "lucide-react";
 import ResumeTemplates from "../Resume/ResumeTemplates.jsx";
 import { Link, useNavigate } from "react-router-dom";
+import useGetallCoverletter from "@/hooks/useGetallCoverletter";
+import useGetAllResumeTemplates from "@/hooks/useGetAllResumeTemplates";
 
 const Resume = () => {
+  useGetAllResumeTemplates();
   const navigate = useNavigate();
 
   const handlescore = () => {
     navigate('/scorechecker');
     console.log("Hell")
   };
+  
 
   return (
     <>

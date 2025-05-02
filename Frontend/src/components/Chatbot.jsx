@@ -16,8 +16,8 @@ const Chatbot = () => {
     { question: "What can I do here?", answer: "🚀 You can build ats friendly resumes,cover letters,find projects, and explore colleges,browse through news!" },
     { question: "Which Resume template to choose?", answer: "🎤 By keeping limited number of templates and each template being strained from ATS solution,you can choose any of them." },
     { question: "Can I save my resume?", answer: "💾 Yes! Your resumes are saved in your profile and can be downloaded anytime in pdf format. " },
-    { question: "Is there a mobile app?", answer: "📱 Yes! You can download our native app for a seamless experience." },
-    { question: "How project finder works ?", answer: "💎 It has projects listed down in categories." },
+  
+    { question: "How project finder works ?", answer: "💎 It has projects listed down categories wise." },
    
   ];
 

@@ -3,12 +3,12 @@ import { RadioGroup } from './ui/radio-group';
 import { RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { useDispatch } from 'react-redux';
-import { setsearchedQuery } from '@/redux/projectsSlice';
+import { setSearchedQuery } from '@/redux/projectsSlice';
 
 const filterdata = [
   {
     filterType: 'Category',
-    array: ['Web Development', 'Application Development', 'IOT Based'],
+    array: ['Web Development', 'Application Development', 'IOT'],
   },
   {
     filterType: 'Role',
@@ -35,8 +35,8 @@ const filterdata = [
       'Flutter',
       'Python',
       'C++',
-      'Arduino',
-      'Raspberry pi',
+      'Arduino/NodeMCU',
+      'NodeMCU/Raspberry Pi',
     ],
   },
 ];
@@ -48,7 +48,7 @@ const Filter = () => {
     setSelectedValue(value);
   }
   useEffect(()=>{
-  dispatch(setsearchedQuery(selectedValue));
+  dispatch(setSearchedQuery(selectedValue));
   },[selectedValue]);
 
   return (

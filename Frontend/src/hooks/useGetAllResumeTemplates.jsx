@@ -1,29 +1,36 @@
 import { setresumeTemplates } from "@/redux/templateSlice";
-import { PROJECT_API_END_POINT, RESUME_API_END_POINT } from "@/utils/Constant";
+import { RESUME_API_END_POINT } from "@/utils/Constant";
 import axios from "axios";
-import React from "react";
 import { useEffect } from "react";
+
 import { useDispatch } from "react-redux";
 
 const useGetAllResumeTemplates = () => {
   const dispatch = useDispatch();
-  useEffect(()=>{
-    const fetchallTemplates = async () => {
+  
+  useEffect(() => {
+    const fetchAllTemplates = async () => {
       try {
         const res = await axios.get(`${RESUME_API_END_POINT}/getAllTemplates`, {
           withCredentials: true,
         });
-        console.log('API Ressponse:', res.data); // Check if this logs the expected structure
-        if (res.data.success) {
-          dispatch(setresumeTemplates(res.data.data)); // Dispatch only the `data` array
+
+        console.log("API Response:", res.data.data); // Debugging log
+
+        if (Array.isArray(res.data.data)) {
+          dispatch(setresumeTemplates(res.data.data)); // Dispatch only `data` array
+        } else {
+          console.error("Invalid API data format:", res.data);
+          dispatch(setresumeTemplates([])); // Ensure state stays an array
         }
       } catch (error) {
-        console.error('API Error:', error.response?.data || error.message);
+        console.error("API Error:", error.response?.data || error.message);
+        dispatch(setresumeTemplates([])); // Prevent state corruption
       }
     };
-    
-    fetchallTemplates();
-  },[])
-}
+
+    fetchAllTemplates();
+  }, [dispatch]);
+};
 
 export default useGetAllResumeTemplates;

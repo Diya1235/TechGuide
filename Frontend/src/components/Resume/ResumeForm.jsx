@@ -11,16 +11,20 @@ import { Button } from '../ui/button';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import ShowResume from './ShowResume';
-import { setCurrentResume } from '@/redux/templateSlice';
+import { resetResumeTemplateId, setCurrentResume } from '@/redux/templateSlice';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { motion } from 'framer-motion';
 import { FaCheck } from 'react-icons/fa';
+import OpenAI from "openai";
 
 const ResumeForm = () => {
     const { templateId } = useSelector((store) => store.templates);
     const { user } = useSelector((store) => store.auth);
     const navigate = useNavigate();
     const dispatch = useDispatch();
+
+
+
 
     const [formData, setFormData] = useState({
         firstName: '',
@@ -30,8 +34,11 @@ const ResumeForm = () => {
         pincode: '',
         phone: '',
         email: '',
-        education: [{ schoolName: '', degree: '', fieldOfStudy: '', startDate: '', endDate: '' }],
-        workHistory: [{ title: '', location: '', employer: '', startDate: '', endDate: '' }],
+        github: '',
+        languages: [''],
+        position: '',
+        education: [{ schoolName: '', degree: '', fieldOfStudy: '', startDate: '', endDate: '', percentage: '' }],
+        workHistory: [{ title: '', location: '', employer: '', startDate: '', endDate: '', description: '' }],
         skills: [{ skill: '' }],
         projects: [{ title: '', description: '', startDate: '', endDate: '' }],
         certifications: [''],
@@ -41,50 +48,56 @@ const ResumeForm = () => {
         templateId: templateId,
         userId: user._id,
     });
-    const genAI = new GoogleGenerativeAI("AIzaSyAOtKk6_GEvkPmBPNgn3L5wGdZE15Ai-QE"); // Ensure you have a valid API Key
+
+
+
+
 
     const [loadingSummary, setLoadingSummary] = useState(false);
-    
-    const handleGenerateSummary = async () => {
+
+    const API_KEY = "AIzaSyBo6lWT5PmFB2yGjovSTv66_Cy7vE-v12o";
+
+    const generateSummary = async (formData, setFormData, setLoadingSummary, toast) => {
         try {
-            if (!formData.firstName || !formData.lastName || !formData.education.length) {
-                toast.error("Please enter your basic details (name and education) before generating a summary.", {
-                    position: "top-center"
-                });
-                return;
+            setLoadingSummary(true);
+
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                parts: [{ text: `Generate a professional resume summary: Name: ${formData.firstName} ${formData.lastName}` }]
+                            }
+                        ]
+                    }),
+                }
+            );
+
+            if (!response.ok) throw new Error("Failed to fetch data");
+            const data = await response.json();
+
+            if (data && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                setFormData(prev => ({ ...prev, summary: data.candidates[0].content.parts[0].text }));
+            } else {
+                toast.error("Failed to generate summary.");
             }
-    
-            setLoadingSummary(true); // Show animation while AI is generating summary
-    
-            const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    
-            const prompt = `Generate a concise, professional resume summary:
-            Name: ${formData.firstName} ${formData.lastName}
-            Education: ${formData.education.map(edu => `${edu.degree} in ${edu.fieldOfStudy}`).join(", ")}
-            Work Experience: ${formData.workHistory.length > 0 
-                ? formData.workHistory.map(work => `${work.title} at ${work.employer}`).join(", ") 
-                : "No work experience"}
-            Skills: ${formData.skills.length > 0 
-                ? formData.skills.map(skill => skill.skill).join(", ") 
-                : "No skills listed"}
-    
-            Summary:`; 
-    
-            // ✅ Correct API call
-            const result = await model.generateContent([prompt]);
-    
-            // ✅ Correct way to extract the response
-            const responseText = await result.response.text();
-    
-            setFormData(prev => ({ ...prev, summary: responseText }));
         } catch (error) {
             console.error("Error generating summary:", error);
-            toast.error("Failed to generate summary. Please try again.");
+            toast.error("Error: Unable to fetch. Check API key & network.");
         } finally {
-            setLoadingSummary(false); // Hide animation after AI response
+            setLoadingSummary(false);
         }
     };
-    
+
+
+
+
+    // ✅ Correct API call
+
+
 
     const [loadingSkills, setLoadingSkills] = useState(false);
 
@@ -96,45 +109,45 @@ const ResumeForm = () => {
                 });
                 return;
             }
-    
+
             setLoadingSkills(true); // Show animation while AI is generating skills
-    
+
             const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    
+
             const prompt = `Suggest exactly 2-3 IT skills based on the user's background.
             Provide only skill names, one per line. Do not include explanations.
     
             Education: ${formData.education.map(edu => `${edu.degree} in ${edu.fieldOfStudy}`).join(", ")}
-            Work Experience: ${formData.workHistory.length > 0 
-                ? formData.workHistory.map(work => `${work.title} at ${work.employer}`).join(", ") 
-                : "No work experience"}
-            Projects: ${formData.projects.length > 0 
-                ? formData.projects.map(proj => proj.title).join(", ") 
-                : "No projects"}
+            Work Experience: ${formData.workHistory.length > 0
+                    ? formData.workHistory.map(work => `${work.title} at ${work.employer}`).join(", ")
+                    : "No work experience"}
+            Projects: ${formData.projects.length > 0
+                    ? formData.projects.map(proj => proj.title).join(", ")
+                    : "No projects"}
     
             Suggested IT Skills:`; // Ensuring clear prompt
-    
+
             // ✅ Correct API Call
             const result = await model.generateContent([prompt]);
-    
+
             // ✅ Correct API Response Handling
             const responseText = await result.response.text();
-    
+
             // ✅ Convert AI response into a list of skills
             const suggestedSkills = responseText
                 .trim()
                 .split("\n") // Ensure skills appear separately
                 .slice(0, 3) // Limit to 2-3 skills
                 .map(skill => ({ skill: skill.trim() }));
-    
+
             // ✅ Ensure unique skills (Avoid duplicates)
             const updatedSkills = [
                 ...formData.skills,
-                ...suggestedSkills.filter(newSkill => 
+                ...suggestedSkills.filter(newSkill =>
                     !formData.skills.some(existingSkill => existingSkill.skill === newSkill.skill)
                 )
             ];
-    
+
             setFormData(prevData => ({
                 ...prevData,
                 skills: updatedSkills,
@@ -146,7 +159,7 @@ const ResumeForm = () => {
             setLoadingSkills(false); // Hide animation after AI response
         }
     };
-    
+
 
     const countryList = [
         'United States',
@@ -162,7 +175,7 @@ const ResumeForm = () => {
     ];
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [errors, setErrors] = useState({
-        firstName: "", lastName: "", phone: "", email: "", pincode: "",
+        firstName: "", lastName: "", phone: "", email: "", position: "", pincode: "",
         city: "", country: "", summary: "",
         education: [], workHistory: [], projects: [], certifications: [],
         skills: [], awards: [], interests: []
@@ -171,16 +184,16 @@ const ResumeForm = () => {
 
     const validateInput = (name, value, index = null, section = null) => {
         let errorMsg = "";
-    
+
         // Basic Details - Name Fields (First, Last, City, Country)
-        if (["firstName", "lastName", "city", "country"].includes(name)) {
+        if (["firstName", "lastName", "city", "country", "position"].includes(name)) {
             if (!/^[a-zA-Z. ]*$/.test(value)) {
                 errorMsg = "Only letters, spaces, and dots are allowed.";
             } else if (value.trim() === "") {
                 errorMsg = "This field cannot be empty.";
             }
         }
-    
+
         // Phone Number - 10 Digits
         if (name === "phone") {
             if (!/^\d{0,10}$/.test(value)) {
@@ -189,14 +202,14 @@ const ResumeForm = () => {
                 errorMsg = "Phone number must be exactly 10 digits.";
             }
         }
-    
+
         // Email - Must follow email format
         if (name === "email") {
             if (!/^\S+@\S+\.\S+$/.test(value)) {
                 errorMsg = "Enter a valid email address.";
             }
         }
-    
+
         // Pincode - Exactly 6 Digits
         if (name === "pincode") {
             if (!/^\d{0,6}$/.test(value)) {
@@ -205,38 +218,38 @@ const ResumeForm = () => {
                 errorMsg = "Pincode must be exactly 6 digits.";
             }
         }
-    
+
         // Education - School Name, Degree, Field of Study
-        if (section === "education" && ["schoolName", "degree", "fieldOfStudy"].includes(name)) {
+        if (section === "education" && ["schoolName", "degree", "fieldOfStudy", "percentage"].includes(name)) {
             if (!/^[a-zA-Z ]*$/.test(value)) {
                 errorMsg = "Only letters and spaces are allowed.";
             }
         }
-    
+
         // Work History - Job Title, Employer, Location
-        if (section === "workHistory" && ["title", "employer", "location"].includes(name)) {
+        if (section === "workHistory" && ["title", "employer", "location", "description"].includes(name)) {
             if (!/^[a-zA-Z ]*$/.test(value)) {
                 errorMsg = "Only letters and spaces are allowed.";
             }
         }
-    
+
         // Projects - Title & Description Cannot Be Empty
         if (section === "projects" && (name === "title" || name === "description")) {
             if (value.trim() === "") {
                 errorMsg = `${name === "title" ? "Project title" : "Project description"} cannot be empty.`;
             }
         }
-    
+
         // Certifications - Cannot Be Empty
         if (section === "certifications" && value.trim() === "") {
             errorMsg = "Certification name cannot be empty.";
         }
-    
+
         // Awards & Interests - Cannot Be Empty
         if (["awards", "interests"].includes(section) && value.trim() === "") {
             errorMsg = `${section.charAt(0).toUpperCase() + section.slice(1)} field cannot be empty.`;
         }
-    
+
         // Summary - Minimum 50 Characters
         if (name === "summary") {
             if (value.trim() === "") {
@@ -245,7 +258,7 @@ const ResumeForm = () => {
                 errorMsg = "Summary must be at least 50 characters.";
             }
         }
-    
+
         setErrors((prev) => {
             if (index !== null && section) {
                 return {
@@ -257,17 +270,17 @@ const ResumeForm = () => {
             }
         });
     };
-    
+
 
 
 
     const handleChange = (e, section, index = null) => {
         const { name, value } = e.target;
-    
+
         validateInput(name, value, index, section); // Validate input live
-    
+
         setFormData((prev) => {
-            if (["certifications", "awards", "interests"].includes(section)) {
+            if (["certifications", "awards", "interests", "languages"].includes(section)) {
                 const updatedSection = [...prev[section]];
                 updatedSection[index] = value; // Store value directly as a string
                 return { ...prev, [section]: updatedSection };
@@ -280,8 +293,8 @@ const ResumeForm = () => {
             }
         });
     };
-    
-    
+
+
 
 
     const handleDateChange = (date, fieldName, index, key) => {
@@ -387,35 +400,52 @@ const ResumeForm = () => {
 
                             {/* First Name */}
 
-                            <div>
+                            <div className="mb-4">
+                                <label htmlFor="firstName" className="block mb-1 font-medium text-gray-700">
+                                    First Name <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     name="firstName"
+                                    id="firstName"
                                     value={formData.firstName}
                                     onChange={(e) => handleChange(e, "firstName")}
                                     className={`w-full p-3 border ${errors.firstName ? "border-red-500" : "border-gray-300"} rounded-md`}
-                                    placeholder="First Name"
+                                    placeholder="Enter your first name"
                                     required
                                 />
-                                {errors.firstName && <p className="text-red-500 text-sm">{errors.firstName}</p>}
+                                {errors.firstName && (
+                                    <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
+                                )}
                             </div>
 
+
                             {/* Last Name */}
-                            <div>
+                            <div className="mb-4">
+                                <label htmlFor="lastName" className="block mb-1 font-medium text-gray-700">
+                                    Last Name <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     name="lastName"
+                                    id="lastName"
                                     value={formData.lastName}
                                     onChange={(e) => handleChange(e, "lastName")}
                                     className={`w-full p-3 border ${errors.lastName ? "border-red-500" : "border-gray-300"} rounded-md`}
-                                    placeholder="Last Name"
+                                    placeholder="Enter your last name"
                                     required
                                 />
-                                {errors.lastName && <p className="text-red-500 text-sm">{errors.lastName}</p>}
+                                {errors.lastName && (
+                                    <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>
+                                )}
                             </div>
+
 
                             {/* City */}
                             <div>
+                            <label htmlFor="city" className="block mb-1 font-medium text-gray-700">
+                                    City <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     name="city"
@@ -429,6 +459,9 @@ const ResumeForm = () => {
 
                             {/* Country */}
                             <div>
+                            <label htmlFor="country" className="block mb-1 font-medium text-gray-700">
+                                    Country <span className="text-red-500">*</span>
+                                </label>
                                 <select
                                     name="country"
                                     value={formData.country}
@@ -445,6 +478,9 @@ const ResumeForm = () => {
 
                             {/* Pincode */}
                             <div>
+                            <label htmlFor="pincode" className="block mb-1 font-medium text-gray-700">
+                                    Pin Code <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     name="pincode"
@@ -457,9 +493,26 @@ const ResumeForm = () => {
                                 />
                                 {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
                             </div>
-
+                            <div>
+                            <label htmlFor="position" className="block mb-1 font-medium text-gray-700">
+                                    Position <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="position"
+                                    value={formData.position}
+                                    onChange={(e) => handleChange(e, "position")}
+                                    className={`w-full p-3 border ${errors.position ? "border-red-500" : "border-gray-300"} rounded-md`}
+                                    placeholder="eg. Frontend Developer"
+                                    required
+                                />
+                                {errors.position && <p className="text-red-500 text-sm">{errors.position}</p>}
+                            </div>
                             {/* Phone Number */}
                             <div>
+                            <label htmlFor="phone" className="block mb-1 font-medium text-gray-700">
+                                    Phone <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="tel"
                                     name="phone"
@@ -475,6 +528,9 @@ const ResumeForm = () => {
 
                             {/* Email */}
                             <div>
+                            <label htmlFor="email" className="block mb-1 font-medium text-gray-700">
+                                   Email <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="email"
                                     name="email"
@@ -485,13 +541,28 @@ const ResumeForm = () => {
                                 />
                                 {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
                             </div>
+                            <div>
+                            <label htmlFor="github" className="block mb-1 font-medium text-gray-700">
+                                    Github
+                                </label>
+                                <input
+                                    type="text"
+                                    name="github"
+                                    value={formData.github}
+                                    onChange={(e) => handleChange(e, "github")}
+                                    className={`w-full p-3 border ${errors.github ? "border-red-500" : "border-gray-300"} rounded-md`}
+                                    placeholder="github link"
+                                />
+                                {errors.github && <p className="text-red-500 text-sm">{errors.github}</p>}
+                            </div>
                         </div>
                     </div>
 
 
                     {/* Education */}
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-                        <h2 className="text-xl font-semibold">Education</h2>
+                        <h2 className="text-xl font-semibold">Education <span className="text-red-500">*</span></h2>
+                       
                         {formData.education.map((edu, index) => (
                             <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
 
@@ -533,7 +604,17 @@ const ResumeForm = () => {
                                     />
                                     {errors.education?.[index]?.fieldOfStudy && <p className="text-red-500 text-sm">{errors.education[index].fieldOfStudy}</p>}
                                 </div>
-
+                                <div>
+                                    <input
+                                        type="text"
+                                        name="percentage"
+                                        value={edu.percentage}
+                                        onChange={(e) => handleChange(e, 'education', index)}
+                                        className={`w-full p-3 border ${errors.education?.[index]?.fieldOfStudy ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                                        placeholder="Percentage scored"
+                                    />
+                                    {errors.education?.[index]?.percentage && <p className="text-red-500 text-sm">{errors.education[index].percentage}</p>}
+                                </div>
                                 {/* Start Date */}
                                 <div>
                                     <DatePicker
@@ -579,7 +660,7 @@ const ResumeForm = () => {
                     {/* Skills */}
                     {/* Skills Section */}
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-                        <h2 className="text-xl font-semibold">Skills</h2>
+                        <h2 className="text-xl font-semibold">Skills <span className="text-red-500">*</span></h2>
 
                         {/* AI Loading Animation (Only Visible While Generating) */}
                         {loadingSkills && (
@@ -596,14 +677,14 @@ const ResumeForm = () => {
                                         type="text"
                                         value={skill.skill}
                                         onChange={(e) => {
-                                            const updatedSkills = formData.skills.map((s, i) => 
+                                            const updatedSkills = formData.skills.map((s, i) =>
                                                 i === index ? { ...s, skill: e.target.value } : s
                                             );
                                             setFormData((prev) => ({ ...prev, skills: updatedSkills }));
                                         }}
-                                        
+
                                         className={`w-full p-3 border ${errors.skills?.[index] ? 'border-red-500' : 'border-gray-300'} rounded-md`}
-                                        placeholder="Enter a skill"
+                                        placeholder=" Hard Skills : Java, Python"
                                     />
                                     {errors.skills?.[index] && <p className="text-red-500 text-sm">{errors.skills[index]}</p>}
                                     {formData.skills.length > 1 && (
@@ -632,17 +713,10 @@ const ResumeForm = () => {
                         </button>
 
                         {/* AI Skill Suggestion Button */}
-                        <button
-                            type="button"
-                            onClick={handleSuggestSkills}
-                            className="px-4 py-2 ml-5 rounded-md mt-2 text-white transition 
-               bg-gradient-to-r from-blue-400 to-indigo-700 
-               hover:from-blue-600 hover:to-indigo-800"
-                        >
-                            Use AI magic ✨
-                        </button>
+                       
 
                     </div>
+
                     {/* Work History */}
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
                         <h2 className="text-xl font-semibold">Work History</h2>
@@ -686,6 +760,17 @@ const ResumeForm = () => {
                                         placeholder="Location"
                                     />
                                     {errors.workHistory?.[index]?.location && <p className="text-red-500 text-sm">{errors.workHistory[index].location}</p>}
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        name="description"
+                                        value={work.description}
+                                        onChange={(e) => handleChange(e, 'workHistory', index)}
+                                        className={`w-full p-3 border ${errors.workHistory?.[index]?.location ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                                        placeholder="description"
+                                    />
+                                    {errors.workHistory?.[index]?.description && <p className="text-red-500 text-sm">{errors.workHistory[index].description}</p>}
                                 </div>
 
                                 {/* Start Date */}
@@ -738,7 +823,7 @@ const ResumeForm = () => {
                     {/* Summary */}
                     {/* Summary Section */}
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-                        <h2 className="text-xl font-semibold">Summary</h2>
+                        <h2 className="text-xl font-semibold">Summary <span className="text-red-500">*</span></h2>
 
                         {/* AI Loading Animation */}
                         {loadingSummary && (
@@ -748,25 +833,18 @@ const ResumeForm = () => {
                         )}
 
                         <textarea
-                            value={formData.summary}
-                            onChange={(e) => handleChange(e, 'summary')}
-                            className={`w-full p-3 border ${errors.summary ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                            name="summary"
+                            value={formData.summary || ""}
+                            onChange={(e) => handleChange(e, "summary")}
+                            className={`w-full p-3 border ${errors.summary ? "border-red-500" : "border-gray-300"} rounded-md`}
                             placeholder="Your professional summary..."
                         />
+
+
                         {errors.summary && <p className="text-red-500 text-sm">{errors.summary}</p>}
 
-                        <button
-                            type="button"
-                            onClick={handleGenerateSummary}
-                            disabled={loadingSummary} // Disable button while AI is generating
-                            className={`px-4 py-2 rounded-md mt-2 transition 
-        ${loadingSummary
-                                    ? "bg-gray-400 cursor-not-allowed"
-                                    : "bg-gradient-to-r from-blue-400 to-indigo-700 text-white hover:from-blue-600 hover:to-indigo-600"
-                                }`}
-                        >
-                            {loadingSummary ? "Generating..." : "Generate AI Summary 🚀"}
-                        </button>
+                       
+
                     </div>
 
 
@@ -801,6 +879,37 @@ const ResumeForm = () => {
                             onClick={() => handleAddField('certifications')}
                             className="text-blue-500"
                         >+ Add Certification</button>
+                    </div>
+                    <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
+                        <h2 className="text-xl font-semibold">Languages Known <span className="text-red-500">*</span></h2>
+
+                        {formData.languages.map((lang, index) => (
+                            <div key={index} className="relative">
+                                <input
+                                    type="text"
+                                    value={lang}
+                                    onChange={(e) => handleChange(e, 'languages', index)}
+                                    className={`w-full p-3 border ${errors.languages?.[index] ? 'border-red-500' : 'border-gray-300'} rounded-md`}
+                                    placeholder="languages "
+                                />
+                                {errors.languages?.[index] && <p className="text-red-500 text-sm">{errors.languages[index]}</p>}
+
+                                {formData.languages.length > 1 && index > 0 && (
+                                    <button
+                                        type="button"
+                                        className="absolute top-0 right-1 text-gray-600 font-bold text-xl"
+                                        onClick={() => handleRemoveField('languages', index)}
+                                    >✕</button>
+                                )}
+                            </div>
+                        ))}
+
+                        {/* Add More Certifications */}
+                        <button
+                            type="button"
+                            onClick={() => handleAddField('languages')}
+                            className="text-blue-500"
+                        >+ Add languages</button>
                     </div>
 
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">

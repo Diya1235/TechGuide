@@ -10,6 +10,7 @@ import Navbar from '../shared/Navbar';
 import useGetallCoverletter from '@/hooks/useGetallCoverletter';
 
 const CoverletterTemplate = () => {
+  useGetallCoverletter();
   const [input, setInput] = useState({
     name: '',
     image: '',
@@ -24,17 +25,7 @@ const CoverletterTemplate = () => {
       [name]: value,
     });
   };
-const handleDelete = async (id) => {
-        if (!id) return;
-        try {
-            const res = await axios.post(`${COVERLETTER_API_END_POINT}/deleteTemplate/${id}`);
-            console.log("Delete Response:", res.data);
-            // Refresh the projects list after deletion
-            useGetallCoverletter(); 
-        } catch (error) {
-            console.error("Error deleting project:", error);
-        }
-    };
+
   const submitHandler = async (e) => {
     e.preventDefault();
     try {

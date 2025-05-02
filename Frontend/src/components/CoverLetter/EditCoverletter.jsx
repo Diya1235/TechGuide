@@ -20,16 +20,12 @@ const CLForm = () => {
     const [formData, setFormData] = useState({
         recipientName: "",
         recipientTitle: "",
-        companyName: "",
-        companyAddress: "",
-        introduction: "",
-        body: [""],
+        company: { name: "", address: "", introduction: "" },
+        body: [{ paragraph: "" }],
         closing: "",
         senderName: "",
-        senderEmail: "",
-        senderPhone: "",
-        senderAddress: "",
         senderTitle: "",
+        senderContact: { email: "", phone: "", address: "" },
         templateId: cltemplateId,
         userId: user ? user._id : "",
     });
@@ -48,26 +44,43 @@ const CLForm = () => {
         if (index !== null) {
             setFormData((prev) => {
                 const updatedBody = [...prev.body];
-                updatedBody[index] = { ...updatedBody[index], paragraph: value }; // Ensure correct structure
+                updatedBody[index] = { ...updatedBody[index], paragraph: value };
                 return { ...prev, body: updatedBody };
             });
+        } else if (["companyName", "companyAddress", "introduction"].includes(name)) {
+            const field = name === "companyName" ? "name" : name === "companyAddress" ? "address" : "introduction";
+            setFormData((prev) => ({
+                ...prev,
+                company: { ...prev.company, [field]: value }
+            }));
+        } else if (["senderEmail", "senderPhone", "senderAddress"].includes(name)) {
+            const field = name === "senderEmail" ? "email" : name === "senderPhone" ? "phone" : "address";
+            setFormData((prev) => ({
+                ...prev,
+                senderContact: { ...prev.senderContact, [field]: value }
+            }));
         } else {
             setFormData((prev) => ({ ...prev, [name]: value }));
         }
     };
 
-
     const addParagraph = () => {
         setFormData((prev) => ({
             ...prev,
-            body: [...prev.body, { paragraph: "", _id: Math.random().toString(36).substr(2, 9) }], // Generate a temp ID
+            body: [...prev.body, { paragraph: "" }],
         }));
     };
 
+    const removeParagraph = (index) => {
+        setFormData((prev) => {
+            const updatedBody = [...prev.body];
+            updatedBody.splice(index, 1);
+            return { ...prev, body: updatedBody };
+        });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         try {
             const response = await axios.post(
                 `${COVERLETTER_API_END_POINT}/update/${formData._id}`,
@@ -92,18 +105,10 @@ const CLForm = () => {
             console.error("Error:", error);
         }
     };
-    const removeParagraph = (index) => {
-        setFormData((prev) => {
-            const updatedBody = [...prev.body];
-            updatedBody.splice(index, 1); // Remove the paragraph at the given index
-            return { ...prev, body: updatedBody };
-        });
-    };
-    const handleBack = () => {
-        navigate("/profile")
-    }
 
-    console.log(formData);
+    const handleBack = () => {
+        navigate("/profile");
+    };
 
     return (
         <>
@@ -113,102 +118,44 @@ const CLForm = () => {
                     Back
                 </Button>
             </div>
+
             <div className="max-w-4xl mx-auto p-8">
                 <h2 className="text-3xl font-bold text-center mb-6">Edit Cover Letter</h2>
                 <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-lg">
-                    <input type="text" name="recipientName" placeholder="Recipient Name" value={formData.recipientName} onChange={handleChange} className="p-3 border rounded-lg w-full mb-4" required />
-                    <input type="text" name="recipientTitle" placeholder="Recipient Title" value={formData.recipientTitle} onChange={handleChange} className="p-3 border rounded-lg w-full mb-4" />
-                    <input
-                        type="text"
-                        name="companyName"
-                        placeholder="Company Name"
-                        value={formData.company?.name || ""}
-                        onChange={(e) => setFormData({
-                            ...formData,
-                            company: { ...formData.company, name: e.target.value }
-                        })}
-                        className="p-3 border rounded-lg w-full mb-4"
-                        required
-                    />
+                    <input name="recipientName" value={formData.recipientName} onChange={handleChange} placeholder="Recipient Name" className="p-3 border rounded-lg w-full mb-4" required />
+                    <input name="recipientTitle" value={formData.recipientTitle} onChange={handleChange} placeholder="Recipient Title" className="p-3 border rounded-lg w-full mb-4" required />
 
-                    <input
-                        type="text"
-                        name="companyAddress"
-                        placeholder="Company Address"
-                        value={formData.company?.address || ""}
-                        onChange={(e) => setFormData({
-                            ...formData,
-                            company: { ...formData.company, address: e.target.value }
-                        })}
-                        className="p-3 border rounded-lg w-full mb-4"
-                        required
-                    />
+                    <input name="companyName" value={formData.company.name} onChange={handleChange} placeholder="Company Name" className="p-3 border rounded-lg w-full mb-4" required />
+                    <input name="companyAddress" value={formData.company.address} onChange={handleChange} placeholder="Company Address" className="p-3 border rounded-lg w-full mb-4" required />
+                    <textarea name="introduction" value={formData.company.introduction} onChange={handleChange} placeholder="Introduction" className="p-3 border rounded-lg w-full mb-4" required />
 
-                    <textarea name="introduction" placeholder="Introduction" value={formData.introduction} onChange={handleChange} className="p-3 border rounded-lg w-full mb-4" required />
                     {formData.body.map((item, index) => (
-                        <div key={item._id || index} className="relative mb-4">
+                        <div key={index} className="relative mb-4">
                             <textarea
-                                placeholder={`Paragraph ${index + 1}`}
-                                value={item.paragraph || ""}
+                                value={item.paragraph}
                                 onChange={(e) => handleChange(e, index)}
-                                className="p-3 border rounded-lg w-full pr-10"
+                                placeholder={`Paragraph ${index + 1}`}
+                                className="p-3 border rounded-lg w-full"
                                 required
                             />
                             {index > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => removeParagraph(index)}
-                                    className="absolute top-2 right-2   text-white px-2 py-1 rounded-full"
-                                >
+                                <button type="button" onClick={() => removeParagraph(index)} className="absolute top-2 right-2 text-red-600 text-lg">
                                     ✖
                                 </button>
                             )}
                         </div>
                     ))}
+                    <button type="button" onClick={addParagraph} className="w-full bg-blue-600 text-white py-2 rounded-lg mb-4">
+                        + Add Paragraph
+                    </button>
 
+                    <textarea name="closing" value={formData.closing} onChange={handleChange} placeholder="Closing" className="p-3 border rounded-lg w-full mb-4" required />
+                    <input name="senderName" value={formData.senderName} onChange={handleChange} placeholder="Your Name" className="p-3 border rounded-lg w-full mb-4" required />
+                    <input name="senderTitle" value={formData.senderTitle} onChange={handleChange} placeholder="Your Title" className="p-3 border rounded-lg w-full mb-4" required />
 
-                    <button type="button" onClick={addParagraph} className="w-full bg-blue-600 text-white py-2 rounded-lg mb-4">+ Add Paragraph</button>
-                    <textarea name="closing" placeholder="Closing" value={formData.closing} onChange={handleChange} className="p-3 border rounded-lg w-full mb-4" required />
-                    <input type="text" name="senderName" placeholder="Your Name" value={formData.senderName} onChange={handleChange} className="p-3 border rounded-lg w-full mb-4" required />
-                    <input type="text" name="senderTitle" placeholder="Your Title" value={formData.senderTitle} onChange={handleChange} className="p-3 border rounded-lg w-full mb-4" required />
-                    <input
-                        type="text"
-                        name="email"
-                        placeholder="Your email"
-                        value={formData.senderContact?.email || ""}
-                        onChange={(e) => setFormData({
-                            ...formData,
-                            senderContact: { ...formData.senderContact, email: e.target.value }
-                        })}
-                        className="p-3 border rounded-lg w-full mb-4"
-                        required
-                    />
-
-                    <input
-                        type="text"
-                        name="address"
-                        placeholder="Your address"
-                        value={formData.senderContact?.address || ""}
-                        onChange={(e) => setFormData({
-                            ...formData,
-                            senderContact: { ...formData.senderContact, address: e.target.value }
-                        })}
-                        className="p-3 border rounded-lg w-full mb-4"
-                        required
-                    />
-
-                    <input
-                        type="text"
-                        name="phone"
-                        placeholder="Your phone"
-                        value={formData.senderContact?.phone || ""}
-                        onChange={(e) => setFormData({
-                            ...formData,
-                            senderContact: { ...formData.senderContact, phone: e.target.value }
-                        })}
-                        className="p-3 border rounded-lg w-full mb-4"
-                        required
-                    />
+                    <input name="senderEmail" value={formData.senderContact.email} onChange={handleChange} placeholder="Your Email" className="p-3 border rounded-lg w-full mb-4" required />
+                    <input name="senderAddress" value={formData.senderContact.address} onChange={handleChange} placeholder="Your Address" className="p-3 border rounded-lg w-full mb-4" required />
+                    <input name="senderPhone" value={formData.senderContact.phone} onChange={handleChange} placeholder="Your Phone" className="p-3 border rounded-lg w-full mb-4" required />
 
                     <div className="flex justify-between mt-4">
                         <button type="button" onClick={() => setIsPreviewOpen(true)} className="bg-blue-500 text-white px-4 py-2 rounded-lg">Preview</button>
@@ -216,7 +163,9 @@ const CLForm = () => {
                     </div>
                 </form>
             </div>
+
             <Footer />
+
             {isPreviewOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-[90%] max-w-2xl max-h-[80vh] overflow-auto relative">

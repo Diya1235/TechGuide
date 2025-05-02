@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Navbar from "../shared/Navbar";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +29,7 @@ const ResumeForm = () => {
         'China',
         'Brazil',
     ];
+    console.log("dispResume Data:", dispResume);
 
     // ✅ Initialize state with dispResume data
     const [formData, setFormData] = useState({
@@ -39,6 +40,9 @@ const ResumeForm = () => {
         pincode: "",
         phone: "",
         email: "",
+        github:"",
+        languages:[],
+        position: "",
         education: [],
         workHistory: [],
         skills: [],
@@ -51,15 +55,40 @@ const ResumeForm = () => {
         userId: user._id,
     });
     const genAI = new GoogleGenerativeAI("AIzaSyAOtKk6_GEvkPmBPNgn3L5wGdZE15Ai-QE");
+    const isFirstLoad = useRef(true);
+
     useEffect(() => {
-        if (dispResume) {
-            setFormData({
-                ...dispResume,
-                templateId: templateId,
-                userId: user._id,
-            });
-        }
+        if (!dispResume || !isFirstLoad.current) return;
+        isFirstLoad.current = false; // ✅ Stops future resets
+
+        setFormData((prev) => ({
+            ...prev,
+            ...dispResume,
+            education: Array.isArray(dispResume.education) ? dispResume.education : [],
+            workHistory: Array.isArray(dispResume.workHistory) ? dispResume.workHistory : [],
+            skills: Array.isArray(dispResume.skills)
+                ? dispResume.skills.map(skill =>
+                    typeof skill === "string" ? { skill } : skill
+                ) // ✅ Converts strings to objects
+                : [],
+            projects: Array.isArray(dispResume.projects) ? dispResume.projects : [],
+            certifications: Array.isArray(dispResume.certifications)
+                ? dispResume.certifications.map(cert => String(cert))
+                : [],
+            awards: Array.isArray(dispResume.awards)
+                ? dispResume.awards.map(award => String(award))
+                : [],
+            interests: Array.isArray(dispResume.interests)
+                ? dispResume.interests.map(interest => String(interest))
+                : [],
+            templateId: templateId,
+            userId: user?._id,
+        }));
     }, [dispResume]);
+    // ✅ Runs only on first load, prevents overwriting
+    // ✅ Runs only when dispResume changes, but prevents further resets
+
+
     const [loadingSummary, setLoadingSummary] = useState(false);
 
     const handleGenerateSummary = async () => {
@@ -140,20 +169,26 @@ const ResumeForm = () => {
     };
 
     // ✅ Handle text input changes
-    const handleDchange = (e, field, index = null) => {
+    const handleDchange = (e, field = null, index = null) => {
         const { name, value } = e.target;
+
         setFormData((prev) => {
-            if (Array.isArray(prev[field]) && index !== null) {
-                // ✅ Handle array fields (e.g., skills, awards)
+            if (field && index !== null) {
+                // Handling array fields (e.g., skills)
                 const updatedField = [...prev[field]];
-                updatedField[index] = value;
+                updatedField[index] =
+                    typeof updatedField[index] === "object"
+                        ? { ...updatedField[index], [name]: value }
+                        : value;
                 return { ...prev, [field]: updatedField };
             } else {
-                // ✅ Handle basic details (firstName, lastName, etc.)
+                // Handling simple fields (e.g., firstName)
                 return { ...prev, [name]: value };
             }
         });
     };
+
+
 
 
 
@@ -170,14 +205,15 @@ const ResumeForm = () => {
 
     // ✅ Add a new field dynamically
     const handleAddField = (fieldName) => {
-        const updatedField = [
-            ...formData[fieldName],
-            fieldName === 'education' || fieldName === 'workHistory' || fieldName === 'projects'
-                ? { title: '', location: '', description: '', startDate: '', endDate: '' }
-                : '',
-        ];
-        setFormData({ ...formData, [fieldName]: updatedField });
-        dispatch(setCurrentResume(formData));
+        setFormData((prev) => ({
+            ...prev,
+            [fieldName]: [
+                ...prev[fieldName],
+                fieldName === 'education' || fieldName === 'workHistory' || fieldName === 'projects'
+                    ? { title: '', location: '', description: '', startDate: '', endDate: '' } // ✅ Keep objects for these fields
+                    : '' // ✅ Add empty string for awards, certifications, interests
+            ],
+        }));
     };
 
 
@@ -185,23 +221,31 @@ const ResumeForm = () => {
 
     const handleEdit = async () => {
         try {
-            const response = await axios.post(`${RESUME_API_END_POINT}/updateResume/${dispResume._id}`, formData, {
-                withCredentials: true,
-                headers: { "Content-Type": "application/json" },
-            });
-            console.log(formData);
+            const formattedFormData = {
+                ...formData,
+                skills: formData.skills.map(skill => skill.skill), // ✅ Convert to an array of strings
+            };
+
+            const response = await axios.post(
+                `${RESUME_API_END_POINT}/updateResume/${dispResume._id}`,
+                formattedFormData,
+                {
+                    withCredentials: true,
+                    headers: { "Content-Type": "application/json" },
+                }
+            );
 
             if (response.data.success) {
                 toast.success("Resume updated successfully", { style: { backgroundColor: "#28a745", color: "#fff" } });
-                dispatch(setResume(formData));
-                console.log(dispResume._id);
-                navigate(`/resume/${dispResume._id}`);
+                dispatch(setResume(formattedFormData)); // ✅ Store correctly formatted data in Redux
+                navigate(`/resume/${dispResume._id}/${dispResume.templateId}`);
             }
         } catch (error) {
             toast.error("Error updating resume", { style: { backgroundColor: "red", color: "#fff" } });
             console.error(error);
         }
     };
+
     const handleSkillChange = (e, index) => {
         const newSkills = [...formData.skills];
         newSkills[index].skill = e.target.value;
@@ -237,22 +281,24 @@ const ResumeForm = () => {
                 <form className="space-y-8">
                     {/* Basic Details */}
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-                        <h2 className="text-xl font-semibold">Basic Details</h2>
+                        <h2 className="text-xl font-semibold">Basic Details  <span className="text-red-500">*</span></h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       
                             <input
                                 type="text"
                                 name="firstName"
                                 value={formData.firstName}
-                                onChange={handleDchange}
+                                onChange={(e) => handleDchange(e)}
                                 className="w-full p-3 border border-gray-300 rounded-md"
                                 placeholder="First Name"
                                 required
                             />
+
                             <input
                                 type="text"
                                 name="lastName"
                                 value={formData.lastName}
-                                onChange={handleDchange}
+                                onChange={(e) => handleDchange(e)}
                                 className="w-full p-3 border border-gray-300 rounded-md"
                                 placeholder="Last Name"
                                 required
@@ -261,14 +307,14 @@ const ResumeForm = () => {
                                 type="text"
                                 name="city"
                                 value={formData.city}
-                                onChange={handleDchange}
+                                onChange={(e) => handleDchange(e)}
                                 className="w-full p-3 border border-gray-300 rounded-md"
                                 placeholder="City"
                             />
                             <select
                                 name="country"
                                 value={formData.country}
-                                onChange={handleDchange}
+                                onChange={(e) => handleDchange(e)}
                                 className="w-full p-3 border border-gray-300 rounded-md"
                             >
                                 <option value="">Select Country</option>
@@ -282,32 +328,49 @@ const ResumeForm = () => {
                                 type="text"
                                 name="pincode"
                                 value={formData.pincode}
-                                onChange={handleDchange}
+                                onChange={(e) => handleDchange(e)}
                                 className="w-full p-3 border border-gray-300 rounded-md"
                                 placeholder="Pincode"
                             />
                             <input
+                                type="text"
+                                name="position"
+                                onChange={(e) => handleDchange(e)}
+                                value={formData.position}
+                                className="w-full p-3 border border-gray-300 rounded-md"
+                                placeholder="Data analyst"
+                            />
+
+                            <input
                                 type="tel"
                                 name="phone"
+                                onChange={(e) => handleDchange(e)}
                                 value={formData.phone}
-                                onChange={handleDchange}
                                 className="w-full p-3 border border-gray-300 rounded-md"
                                 placeholder="Phone Number"
                             />
                             <input
                                 type="email"
                                 name="email"
+                                onChange={(e) => handleDchange(e)}
                                 value={formData.email}
-                                onChange={handleDchange}
                                 className="w-full p-3 border border-gray-300 rounded-md"
                                 placeholder="Email"
+                            />
+                             <input
+                                type="text"
+                                name="github"
+                                onChange={(e) => handleDchange(e)}
+                                value={formData.github}
+                                className="w-full p-3 border border-gray-300 rounded-md"
+                                placeholder="github"
                             />
                         </div>
                     </div>
 
                     {/* Education */}
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-                        <h2 className="text-xl font-semibold">Education</h2>
+                        <h2 className="text-xl font-semibold">Education  <span className="text-red-500">*</span></h2>
 
                         {formData.education.map((edu, index) => (
                             <div key={index} className="relative grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border rounded-md">
@@ -335,6 +398,17 @@ const ResumeForm = () => {
                                     className="w-full p-3 border border-gray-300 rounded-md"
                                     placeholder="Field of Study"
                                 />
+                               
+                                    <input
+                                        type="text"
+                                        name="percentage"
+                                        value={edu.percentage}
+                                        onChange={(e) => handleDchange(e, 'education', index)}
+                                        className={`w-full p-3 border rounded-md`}
+                                        placeholder="Percentage scored"
+                                    />
+                                    
+                               
                                 <DatePicker
                                     selected={edu.startDate ? new Date(edu.startDate) : null}
                                     onChange={(date) => handleDateChange(date, "education", index, "startDate")}
@@ -377,7 +451,7 @@ const ResumeForm = () => {
 
                     {/* Skills */}
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-                        <h2 className="text-xl font-semibold">Skills</h2>
+                        <h2 className="text-xl font-semibold">Skills  <span className="text-red-500">*</span></h2>
 
                         {/* AI Loading Animation (Only Visible While Generating) */}
                         {loadingSkills && (
@@ -392,14 +466,14 @@ const ResumeForm = () => {
                                 <div key={index} className="relative bg-gray-100 p-2 rounded-md flex items-center">
                                     <input
                                         type="text"
-                                        value={skill.skill}
+                                        value={skill.skill} // ✅ Access `skill` property
                                         onChange={(e) => {
                                             const updatedSkills = [...formData.skills];
                                             updatedSkills[index] = { skill: e.target.value };
                                             setFormData({ ...formData, skills: updatedSkills });
                                         }}
                                         className="w-full p-2 border border-gray-300 rounded-md"
-                                        placeholder="Enter a skill"
+                                        placeholder=" Hard Skills : Java, Python"
                                     />
                                     {formData.skills.length > 1 && (
                                         <button
@@ -412,6 +486,7 @@ const ResumeForm = () => {
                                     )}
                                 </div>
                             ))}
+
                         </div>
 
                         {/* "Add Skill" Button */}
@@ -427,78 +502,7 @@ const ResumeForm = () => {
                         </button>
 
                         {/* AI Skill Suggestion Button */}
-                        <button
-                            type="button"
-                            onClick={handleSuggestSkills}
-                            className="bg-green-500 text-white px-4 py-2 ml-5 rounded-md mt-2 hover:bg-green-600 transition"
-                        >
-                            Suggest IT Skills
-                        </button>
-                    </div>
-                    <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-                        <h2 className="text-xl font-semibold">Awards</h2>
-                        {formData.awards.map((award, index) => (
-                            <div key={index} className="relative flex items-center">
-                                <input
-                                    type="text"
-                                    value={award}
-                                    onChange={(e) => handleDchange(e, "awards", index)}
-                                    className="w-full p-3 border border-gray-300 rounded-md"
-                                    placeholder="Enter award name"
-                                />
-
-                                {/* X Button (Only Visible on 2nd Entry and Beyond) */}
-                                {index > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveField("awards", index)}
-                                        className="absolute right-2 text-red-500 hover:text-red-700"
-                                    >
-                                        ✖
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-
-                        <button type="button" onClick={() => handleAddField("awards")} className="text-blue-500">
-                            + Add Award
-                        </button>
-                    </div>
-
-                    <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-                        <h2 className="text-xl font-semibold">Interests</h2>
-
-                        {formData.interests.map((interest, index) => (
-                            <div key={index} className="relative flex items-center w-full">
-                                <input
-                                    type="text"
-                                    value={interest} // ✅ Directly access the string value
-                                    onChange={(e) => handleDchange(e, "interests", index)} // ✅ Use centralized handler
-                                    className="w-full p-3 border border-gray-300 rounded-md"
-                                    placeholder="Enter interest"
-                                />
-
-                                {/* Remove Button (Hidden for the First Entry) */}
-                                {formData.interests.length > 1 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveField("interests", index)}
-                                        className="absolute right-2 text-red-500 hover:text-red-700"
-                                    >
-                                        ✖
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-
-                        {/* Add Interest Button */}
-                        <button
-                            type="button"
-                            onClick={() => handleAddField("interests")}
-                            className="text-blue-500 hover:underline"
-                        >
-                            + Add Interest
-                        </button>
+                        
                     </div>
 
 
@@ -530,6 +534,13 @@ const ResumeForm = () => {
                                     onChange={(e) => handleDchange(e, "workHistory", index)}
                                     className="w-full p-3 border border-gray-300 rounded-md"
                                     placeholder="Location"
+                                />
+                                <textarea
+                                    name="description"
+                                    value={work.description}
+                                    onChange={(e) => handleDchange(e, "workHistory", index)}
+                                    className="w-full p-3 border border-gray-300 rounded-md"
+                                    placeholder="Work Description"
                                 />
                                 <DatePicker
                                     selected={work.startDate ? new Date(work.startDate) : null}
@@ -572,7 +583,7 @@ const ResumeForm = () => {
 
                     {/* Summary */}
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-                        <h2 className="text-xl font-semibold">Summary</h2>
+                        <h2 className="text-xl font-semibold">Summary  <span className="text-red-500">*</span></h2>
 
                         {/* AI Loading Animation */}
                         {loadingSummary && (
@@ -582,21 +593,15 @@ const ResumeForm = () => {
                         )}
 
                         <textarea
+                            name="summary"
                             value={formData.summary}
-                            onChange={(e) => handleChange(e, 'summary')}
+                            onChange={(e) => handleDchange(e, "summary")}  // ✅ Calls with "summary"
                             className="w-full p-3 border border-gray-300 rounded-md"
                             placeholder="Your professional summary..."
                         />
 
-                        <button
-                            type="button"
-                            onClick={handleGenerateSummary}
-                            disabled={loadingSummary} // Disable button while AI is generating
-                            className={`px-4 py-2 rounded-md mt-2 transition ${loadingSummary ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-600"
-                                }`}
-                        >
-                            {loadingSummary ? "Generating..." : "Generate AI Summary"}
-                        </button>
+
+                        
                     </div>
 
 
@@ -632,6 +637,39 @@ const ResumeForm = () => {
                             className="text-blue-500"
                         >
                             + Add Certificate
+                        </button>
+                    </div>
+                    <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
+                        <h2 className="text-xl font-semibold">Languages  <span className="text-red-500">*</span></h2>
+                        {formData.languages.map((lang, index) => (
+                            <div key={index} className="relative flex items-center">
+                                <input
+                                    type="text"
+                                    value={lang}
+                                    onChange={(e) => handleDchange(e, "languages", index)}
+                                    className="w-full p-3 border border-gray-300 rounded-md"
+                                    placeholder="Enter certificate name"
+                                />
+
+                                {/* Show Remove Button Only on the 2nd and Later Fields */}
+                                {index > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveField("languages", index)}
+                                        className="absolute right-2 text-red-500 hover:text-red-700"
+                                    >
+                                        ✖
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+
+                        <button
+                            type="button"
+                            onClick={() => handleAddField("languages")}
+                            className="text-blue-500"
+                        >
+                            + Add language
                         </button>
                     </div>
 
@@ -693,68 +731,68 @@ const ResumeForm = () => {
                         </button>
                     </div>
                     <div className="p-6 bg-white rounded-lg shadow-md space-y-4">
-    {/* Awards Section */}
-    <h2 className="text-xl font-semibold">Awards</h2>
-    {formData.awards.map((award, index) => (
-        <div key={index} className="relative flex items-center">
-            <input
-                type="text"
-                value={award}
-                onChange={(e) => handleDchange(e, "awards", index)}
-                className="w-full p-3 border border-gray-300 rounded-md"
-                placeholder="Enter award name"
-            />
-            {/* Show Remove Button Only on the 2nd and Later Fields */}
-            {index > 0 && (
-                <button
-                    type="button"
-                    onClick={() => handleRemoveField("awards", index)}
-                    className="absolute right-2 text-red-500 hover:text-red-700"
-                >
-                    ✖
-                </button>
-            )}
-        </div>
-    ))}
-    <button
-        type="button"
-        onClick={() => handleAddField("awards")}
-        className="text-blue-500"
-    >
-        + Add Award
-    </button>
+                        {/* Awards Section */}
+                        <h2 className="text-xl font-semibold">Awards</h2>
+                        {formData.awards.map((award, index) => (
+                            <div key={index} className="relative flex items-center">
+                                <input
+                                    type="text"
+                                    value={award}
+                                    onChange={(e) => handleDchange(e, "awards", index)}
+                                    className="w-full p-3 border border-gray-300 rounded-md"
+                                    placeholder="Enter award name"
+                                />
+                                {/* Show Remove Button Only on the 2nd and Later Fields */}
+                                {index > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveField("awards", index)}
+                                        className="absolute right-2 text-red-500 hover:text-red-700"
+                                    >
+                                        ✖
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() => handleAddField("awards")}
+                            className="text-blue-500"
+                        >
+                            + Add Award
+                        </button>
 
-    {/* Interests Section */}
-    <h2 className="text-xl font-semibold mt-6">Interests</h2>
-    {formData.interests.map((interest, index) => (
-        <div key={index} className="relative flex items-center">
-            <input
-                type="text"
-                value={interest}
-                onChange={(e) => handleDchange(e, "interests", index)}
-                className="w-full p-3 border border-gray-300 rounded-md"
-                placeholder="Enter interest (e.g., AI, Blockchain, Cybersecurity)"
-            />
-            {/* Show Remove Button Only on the 2nd and Later Fields */}
-            {index > 0 && (
-                <button
-                    type="button"
-                    onClick={() => handleRemoveField("interests", index)}
-                    className="absolute right-2 text-red-500 hover:text-red-700"
-                >
-                    ✖
-                </button>
-            )}
-        </div>
-    ))}
-    <button
-        type="button"
-        onClick={() => handleAddField("interests")}
-        className="text-blue-500"
-    >
-        + Add Interest
-    </button>
-</div>
+                        {/* Interests Section */}
+                        <h2 className="text-xl font-semibold mt-6">Interests</h2>
+                        {formData.interests.map((interest, index) => (
+                            <div key={index} className="relative flex items-center">
+                                <input
+                                    type="text"
+                                    value={interest}
+                                    onChange={(e) => handleDchange(e, "interests", index)}
+                                    className="w-full p-3 border border-gray-300 rounded-md"
+                                    placeholder="Enter interest (e.g., AI, Blockchain, Cybersecurity)"
+                                />
+                                {/* Show Remove Button Only on the 2nd and Later Fields */}
+                                {index > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveField("interests", index)}
+                                        className="absolute right-2 text-red-500 hover:text-red-700"
+                                    >
+                                        ✖
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() => handleAddField("interests")}
+                            className="text-blue-500"
+                        >
+                            + Add Interest
+                        </button>
+                    </div>
 
 
 

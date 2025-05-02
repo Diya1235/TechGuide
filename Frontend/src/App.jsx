@@ -59,7 +59,8 @@ const appRouter = createBrowserRouter([
     element: (
       <PrivateRoute>
         <Projects />
-      </PrivateRoute>
+        </PrivateRoute>
+      
     ),
   },
   {
@@ -67,7 +68,8 @@ const appRouter = createBrowserRouter([
     element: (
       <PrivateRoute>
         <Resume />
-      </PrivateRoute>
+        </PrivateRoute>
+     
     ),
   },
   {
@@ -83,7 +85,8 @@ const appRouter = createBrowserRouter([
     element: (
       <PrivateRoute>
         <News />
-      </PrivateRoute>
+        </PrivateRoute>
+      
     ),
   },
   {
@@ -91,7 +94,8 @@ const appRouter = createBrowserRouter([
     element: (
       <PrivateRoute>
         <Projectcard />
-      </PrivateRoute>
+        </PrivateRoute>
+      
     ),
   },
   {
@@ -99,7 +103,8 @@ const appRouter = createBrowserRouter([
     element: (
       <PrivateRoute>
         <ProjectDescription />
-      </PrivateRoute>
+        </PrivateRoute>
+      
     ),
   },
   {
@@ -107,7 +112,8 @@ const appRouter = createBrowserRouter([
     element: (
       <PrivateRoute>
         <Coverletter />
-      </PrivateRoute>
+        </PrivateRoute>
+      
     ),
   },
   {
@@ -115,7 +121,8 @@ const appRouter = createBrowserRouter([
     element: (
       <PrivateRoute>
         <WorldMap />
-      </PrivateRoute>
+        </PrivateRoute>
+     
     ),
   },
   {
@@ -123,15 +130,16 @@ const appRouter = createBrowserRouter([
     element: (
       <PrivateRoute>
         <CollegeResults />
-      </PrivateRoute>
+        </PrivateRoute>
+      
     ),
   },
   {
     path: '/aboutus',
     element: (
-
+      
       <Aboutus />
-
+      
     ),
   },
   {
@@ -139,7 +147,8 @@ const appRouter = createBrowserRouter([
     element: (
       <PrivateRoute>
         <Profile />
-      </PrivateRoute>
+        </PrivateRoute>
+      
     ),
   },
   {
@@ -151,7 +160,7 @@ const appRouter = createBrowserRouter([
     )
   },
   {
-    path: '/resume/:id',
+    path: '/resume/:id/:tempId',
     element: (
       <PrivateRoute>
         <DisplayResume />
@@ -201,9 +210,9 @@ const appRouter = createBrowserRouter([
   {
     path: '/user/resumes',
     element: (
-      <PrivateRoute>
+      
         <ResumeCards />
-      </PrivateRoute>
+      
     ),
   },
   {

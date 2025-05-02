@@ -11,8 +11,10 @@ import { Loader2 } from "lucide-react";
 import axios from "axios";
 import { USER_API_END_POINT } from "@/utils/Constant";
 import { toast } from "sonner";
-import log from '../images/Loginpage.gif';
-import sig from '../images/signup.gif';
+import log from '../images/car.png';
+import sig from '../images/robo.png';
+import { Eye, EyeOff } from "lucide-react";
+
 
 const AuthPage = () => {
   const [isSignIn, setIsSignIn] = useState(true); // Toggle between Sign In and Sign Up
@@ -22,14 +24,20 @@ const AuthPage = () => {
     password: "",
     phone: "",
     role: "user",
-    linkedIn:"",
-    github:"",
+    linkedIn: "",
+    github: "",
     file: "",
   });
   const [errors, setErrors] = useState({});
-  const { loading,user } = useSelector((store) => store.auth);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+
+  const { loading, user } = useSelector((store) => store.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
 
   // Field validation
   const validateField = (name, value) => {
@@ -55,22 +63,53 @@ const AuthPage = () => {
           delete tempErrors.email;
         }
         break;
-
       case "password":
-        if (value.trim() === "" || value.length < 6) {
-          tempErrors.password = "Password must be at least 6 characters.";
+        // Skip validation for password during Sign In
+        if (!isSignIn) {
+          const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!#%*?&])[A-Za-z\d@#$!%*?&]{6,}$/;
+
+          if (value.trim() === "" || value.length < 6) {
+            tempErrors.password = "Password must be at least 6 characters.";
+          } else if (!passwordRegex.test(value)) {
+            tempErrors.password = "Password must contain at least one letter, one number, and one special character.";
+          } else {
+            delete tempErrors.password;
+          }
         } else {
-          delete tempErrors.password;
+          delete tempErrors.password; // ✅ Remove password errors when signing in
         }
         break;
+
+      case "confirmPassword":
+        if (!isSignIn) {
+          if (value.trim() === "") {
+            tempErrors.confirmPassword = "Confirm Password is required.";
+          } else if (value !== input.password) {
+            tempErrors.confirmPassword = "Password and Confirm Password must match.";
+          } else {
+            delete tempErrors.confirmPassword;
+          }
+        } else {
+          delete tempErrors.confirmPassword; // ✅ Remove confirm password errors when signing in
+        }
+        break;
+
+
 
       case "phone":
-        if (!isSignIn && (value.trim() === "" || value.length !== 10)) {
-          tempErrors.phone = "Phone number must be exactly 10 digits.";
-        } else {
-          delete tempErrors.phone;
+        if (!isSignIn) {
+          if (value.trim() === "" || value.length !== 10) {
+            tempErrors.phone = "Phone number must be exactly 10 digits.";
+          } else if (/^(\d)\1{9}$/.test(value)) {
+            tempErrors.phone = "Phone number should not contain all identical digits (e.g., 0000000000, 1111111111).";
+          } else if (/^(0123456789|1234567890|9876543210)$/.test(value)) {
+            tempErrors.phone = "Sequential phone numbers are not allowed.";
+          } else {
+            delete tempErrors.phone;
+          }
         }
         break;
+
 
       default:
         break;
@@ -116,12 +155,12 @@ const AuthPage = () => {
           toast.success(res.data.message, {
             position: "top-center",
             style: { marginTop: "100px" }
-        });
+          });
         }
       } catch (error) {
         toast.error(error.response?.data?.message || "An error occurred", {
           position: "top-center"
-      });
+        });
       } finally {
         dispatch(setLoading(false));
       }
@@ -145,23 +184,62 @@ const AuthPage = () => {
           toast.success(res.data.message, {
             position: "top-center",
             style: { marginTop: "100px" }
-        });
+          });
           setIsSignIn(true);
         }
       } catch (error) {
         toast.error(error.response?.data?.message || "An error occurred", {
           position: "top-center"
-      });
+        });
       } finally {
         dispatch(setLoading(false));
       }
     }
   };
- useEffect(()=>{
-  if(user){
-    navigate("/");
-  }
- })
+  const handleUpdatePassword = async () => {
+    // Password validation
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!#%*?&])[A-Za-z\d@#$!%*?&]{6,}$/;
+    const tempErrors = {};
+
+    if (newPassword.trim() === "" || newPassword.length < 6) {
+      tempErrors.newPassword = "Password must be at least 6 characters.";
+    } else if (!passwordRegex.test(newPassword)) {
+      tempErrors.newPassword = "Password must contain at least one letter, one number, and one special character.";
+    } else {
+      delete tempErrors.newPassword;  // ✅ Clear errors if valid
+    }
+
+    setErrors(tempErrors);
+
+    if (Object.keys(tempErrors).length > 0) return;
+
+    dispatch(setLoading(true));
+
+    try {
+      const res = await axios.post(`${USER_API_END_POINT}/reset-password`, {
+        email: input.email,  // ✅ Ensure email is sent
+        password: newPassword,  // ✅ Use newPassword
+      }, { withCredentials: true });
+
+      if (res.data.success) {
+        toast.success("Password updated successfully! Please log in.", { position: "top-center" });
+        setShowForgotPassword(false);
+        setIsSignIn(true);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update password", {
+        position: "top-center",
+      });
+    } finally {
+      dispatch(setLoading(false));  // ✅ Stop loading
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  })
   return (
     <>
       <Navbar />
@@ -186,18 +264,16 @@ const AuthPage = () => {
             <div className="flex justify-between mb-7 mt-2">
               <button
                 type="button"
-                className={`flex-1 py-2 px-4 text-center rounded-l-lg ${
-                  isSignIn ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800"
-                }`}
+                className={`flex-1 py-2 px-4 text-center rounded-l-lg ${isSignIn ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800"
+                  }`}
                 onClick={() => setIsSignIn(true)}
               >
                 Sign In
               </button>
               <button
                 type="button"
-                className={`flex-1 py-2 px-4 text-center rounded-r-lg ${
-                  !isSignIn ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800"
-                }`}
+                className={`flex-1 py-2 px-4 text-center rounded-r-lg ${!isSignIn ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800"
+                  }`}
                 onClick={() => setIsSignIn(false)}
               >
                 Register
@@ -233,19 +309,107 @@ const AuthPage = () => {
                   <p className="text-red-500 text-sm">{errors.email}</p>
                 )}
               </div>
-              <div className="my-2">
+              
+
+              <div className="my-2 relative">
                 <Label>Password</Label>
-                <Input
-                  type="password"
-                  value={input.password}
-                  name="password"
-                  placeholder="Password"
-                  onChange={changeEventHandler}
-                />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={input.password}
+                    name="password"
+                    placeholder="Password"
+                    onChange={changeEventHandler}
+                    className="pr-10" // Space for the icon
+                  />
+                  {/* Eye icon button */}
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <Eye size={20} /> :  <EyeOff size={20} />}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-red-500 text-sm">{errors.password}</p>
                 )}
               </div>
+
+              {!isSignIn && (
+                <div className="my-2">
+                  <Label>Confirm Password</Label>
+                  <Input
+                    type="password"
+                    value={input.confirmPassword}
+                    name="confirmPassword"
+                    placeholder="Confirm Password"
+                    onChange={changeEventHandler}
+                  />
+                  {errors.confirmPassword && (
+                    <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+              )}
+              {/* Forgot Password Link (Only for Sign In) */}
+              {isSignIn && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="text-blue-500 text-sm hover:underline"
+                    onClick={() => setShowForgotPassword(true)} >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
+              {showForgotPassword && (
+                <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-50">
+                  <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                    <h2 className="text-lg font-semibold mb-4">Reset Password</h2>
+
+                    {/* Email Field (Read-Only) */}
+                    <div className="my-2">
+                      <Label>Email</Label>
+                      <Input
+                        type="text"
+                        name="email"
+                        value={input.email}  // ✅ Ensure email is filled
+                        onChange={changeEventHandler}
+                        placeholder="Enter your email"
+                      />
+
+                    </div>
+
+
+                    {/* New Password Field */}
+                    <div className="my-2">
+                      <Label>New Password</Label>
+                      <Input
+                        type="password"
+                        value={newPassword}
+                        name="newPassword"
+                        placeholder="Enter New Password"
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                      {errors.newPassword && (
+                        <p className="text-red-500 text-sm">{errors.newPassword}</p>
+                      )}
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex justify-end gap-2 mt-4">
+                      <Button onClick={() => setShowForgotPassword(false)} variant="outline">
+                        Cancel
+                      </Button>
+                      <Button onClick={handleUpdatePassword} className="bg-blue-500">
+                        Update Password
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {!isSignIn && (
                 <>
                   <div className="my-2">
@@ -278,14 +442,7 @@ const AuthPage = () => {
                       </div>
                     </RadioGroup>
                   </div>
-                  <div className="my-4 flex flex-col sm:flex-row items-center gap-2">
-                    <Label className="mb-2 sm:mb-0">Profile</Label>
-                    <Input
-                      accept="image/*"
-                      onChange={changeFileHandler}
-                      type="file"
-                    />
-                  </div>
+
                 </>
               )}
 

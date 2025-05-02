@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "./shared/Navbar";
 import Footer from "./Footer";
 import { Avatar, AvatarImage } from "./ui/avatar";
@@ -8,15 +8,23 @@ import { Badge } from "./ui/badge";
 import { Label } from "./ui/label";
 import SavedProjects from "./SavedProjects";
 import UpdateProfileDialog from "./UpdateProfileDialog";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import SavedResume from "./Resume/SavedResume";
 import { motion } from "framer-motion";
 import UserSavedCL from "./CoverLetter/UserSavedCL";
+import { fetchSavedProjects } from "@/redux/projectsSlice";
+import { resetResumeTemplateId } from "@/redux/templateSlice";
 
 const Profile = () => {
   const [open, setOpen] = useState(false);
   const { user } = useSelector((store) => store.auth);
-
+  const dispatch= useDispatch();
+  
+ useEffect(() => {
+        return () => {
+            dispatch(resetResumeTemplateId()); // ✅ Reset Redux state on unmount
+        };
+    }, []);
   return (
     <>
       <Navbar />
@@ -64,18 +72,18 @@ const Profile = () => {
                 rel="noopener noreferrer"
                 className="text-gray-500 hover:text-black transition"
               >
-                {user?.github || "N/A"}
+                {user?.profile?.github || "N/A"}
               </a>
             </div>
             <div className="flex items-center gap-3">
               <LinkedinIcon />
               <a
-                href={user?.linkedIn || "#"}
+                href={user?.profile?.linkedIn || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:text-blue-700 transition"
               >
-                {user?.linkedIn || "N/A"}
+                {user?.profile?.linkedIn || "N/A"}
               </a>
             </div>
           </div>
@@ -102,13 +110,15 @@ const Profile = () => {
           <h2 className="text-xl font-medium text-gray-700">Resume</h2>
           {user?.profile?.resume ? (
             <a
-              href={user.profile.resume}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline cursor-pointer block mt-2"
-            >
-              View Resume
-            </a>
+            href={user.profile.resume}
+            target="_blank"
+            rel="noopener noreferrer"
+            download="resume.pdf" // Forces the file to be downloaded as a PDF
+            className="text-blue-600 hover:underline cursor-pointer block mt-2"
+          >
+            Your Resume
+          </a>
+          
           ) : (
             <span className="text-gray-500">N/A</span>
           )}

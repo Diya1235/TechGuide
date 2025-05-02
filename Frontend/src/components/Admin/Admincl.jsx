@@ -36,10 +36,11 @@ const Admincl = () => {
     const handleDelete = async (id) => {
         if (!id) return;
         try {
-            const res = await axios.post(
+            const res = await axios.delete(
                 `${COVERLETTER_API_END_POINT}/deleteTemplate/${id}`,
-                {}, 
-                { withCredentials: true }
+                {  headers: { "Content-Type": "application/json" },
+                withCredentials: true,}, 
+                
             );
             if(res.data.success)
             {

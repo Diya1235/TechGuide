@@ -3,11 +3,13 @@ import React from "react";
 const TemplateA = ({ formData }) => {
     if (!formData) return <p className="text-center text-gray-700">No data available.</p>;
 
+    console.log("TemplateA Data:", formData); // Debugging
+
     return (
         <div className="max-w-2xl mx-auto p-8 bg-white border shadow-lg rounded-lg">
             {/* Sender Information */}
-            <h2 className="text-2xl font-bold">{formData.senderName}</h2>
-            <p className="text-lg text-gray-700">{formData.senderTitle}</p>
+            <h2 className="text-2xl font-bold">{formData.senderName || "Your Name"}</h2>
+            <p className="text-lg text-gray-700">{formData.senderTitle || "Your Title"}</p>
 
             <div className="mt-4">
                 {formData.senderContact?.phone && <p><strong>Phone:</strong> {formData.senderContact.phone}</p>}
@@ -21,32 +23,37 @@ const TemplateA = ({ formData }) => {
             </div>
 
             {/* Date */}
-            <p className="mt-6">{new Date().toLocaleDateString()}</p>
+            <p className="mt-6">{formData.date}</p>
 
-            {/* Recipient Details */}
+            {/* Recipient Information */}
             <div className="mt-6">
-                <p><strong>{formData.recipientName}</strong></p>
-                <p><em>{formData.recipientTitle}</em></p>
-                <p>{formData.company?.name}</p>
-                <p>{formData.company?.address}</p>
+                <p><strong>{formData.recipientName || "Recipient Name"}</strong></p>
+                <p><em>{formData.recipientTitle || "Recipient Title"}</em></p>
+                <p>{formData.company?.name || "Company Name"}</p>
+                <p>{formData.company?.address || "Company Address"}</p>
             </div>
 
-            {/* Letter Content */}
-            <p className="mt-6">{formData.salutation}</p>
-            <p className="mt-4">{formData.introduction}</p>
+            {/* Letter Opening */}
+            <p className="mt-6">Dear {formData.recipientName || "Recipient Name"},</p>
+
+            {/* Introduction */}
+            <p className="mt-4">{formData.company?.introduction || "Your introduction here..."}</p>
 
             {/* Body Paragraphs */}
-            {Array.isArray(formData.body) && formData.body.length > 0 && (
+            {Array.isArray(formData.body) && formData.body.length > 0 ? (
                 formData.body.map((paraObj, index) => (
-                    <p key={paraObj._id || index} className="mt-4">{paraObj.paragraph}</p>
+                    <p key={index} className="mt-4">{paraObj.paragraph || "..."}</p>
                 ))
+            ) : (
+                <p className="mt-4">Your body content here...</p>
             )}
 
-            <p className="mt-4">{formData.closing}</p>
+            {/* Closing */}
+            <p className="mt-4">{formData.closing || "Your closing statement..."}</p>
 
             {/* Signature */}
-            <p className="mt-6">{formData.signOff}</p>
-            <p>{formData.senderName}</p>
+            <p className="mt-6">Sincerely,</p>
+            <p>{formData.senderName || "Your Name"}</p>
         </div>
     );
 };

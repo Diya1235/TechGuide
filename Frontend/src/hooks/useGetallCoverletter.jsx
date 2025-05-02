@@ -15,7 +15,7 @@ const useGetallCoverletter = () => { // ❌ Remove refreshTrigger as a parameter
 
       console.log("API Response:", res.data);
       
-      if (res.data.success) {
+      if (res.data) {
         dispatch(setcLTemplates(res.data.data)); // ✅ Update Redux store
       }
     } catch (error) {

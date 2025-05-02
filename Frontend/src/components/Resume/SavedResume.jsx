@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { setsavedResumes } from '@/redux/templateSlice';
+import { setresumetemplateId, setsavedResumes } from '@/redux/templateSlice';
 import { RESUME_API_END_POINT } from '@/utils/Constant';
 import { FaTrashAlt } from 'react-icons/fa'; // Importing trash bin icon from react-icons
 import { toast } from 'sonner';
@@ -24,32 +24,59 @@ const SavedResume = () => {
   ];
 
   useEffect(() => {
+    if (!user?._id) return; // Avoid running if user ID is not available
+
     const fetchUserSavedResume = async () => {
       try {
+        console.log('Fetching resumes for user:', user._id);
+
         const res = await axios.get(`${RESUME_API_END_POINT}/getUserResume/${user._id}`, {
           withCredentials: true,
         });
 
+        console.log('API Response:', res.data);
+
         if (res.data.success) {
           const resumeData = Array.isArray(res.data.data) ? res.data.data : [res.data.data];
+          console.log('Filtered Resumes:', resumeData);
           dispatch(setsavedResumes(resumeData));
+        } else {
+          console.warn('No resumes found for this user.');
         }
       } catch (error) {
         console.error('Error fetching saved resumes:', error);
+        dispatch(setsavedResumes([]))
       }
     };
-    if (user?._id) fetchUserSavedResume();
-  }, [user, dispatch]);
 
-  const handleDetailsClick = (resumeId) => {
-    navigate(`/resume/${resumeId}`);
+    fetchUserSavedResume();
+  }, [user?._id, dispatch]);
+
+
+
+  const handleDetailsClick = (resumeId, templateId) => {
+    if (!resumeId) return; // Prevent navigation if resumeId is missing
+
+    // Ensure templateId is a string (avoid Mongoose in frontend)
+    const validTemplateId = templateId ? String(templateId) : null;
+
+    dispatch(setresumetemplateId(validTemplateId));
+    console.log(validTemplateId);
+    console.log("Navigating to Resume ID:", resumeId, "with Template ID:", validTemplateId);
+
+    // Navigate to the resume page
+    navigate(`/resume/${resumeId}/${validTemplateId}`);
   };
+
+
+
 
   const handleDelete = async (resumeId) => {
     try {
       const res = await axios.delete(`${RESUME_API_END_POINT}/deleteResume/${resumeId}`, {
         withCredentials: true,
       });
+      console.log(res.data)
 
       if (res.data.success) {
         // After successful deletion, remove the deleted resume from the Redux state
@@ -71,8 +98,9 @@ const SavedResume = () => {
           <div
             key={resume._id}
             className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow cursor-pointer border border-gray-400"
-            onClick={() => handleDetailsClick(resume._id)}
+            onClick={() => handleDetailsClick(resume._id, resume.templateId)}
           >
+
             {/* Static image from array */}
             <img
               src={images[index % images.length]} // Cycle through the array of images
@@ -89,25 +117,29 @@ const SavedResume = () => {
 
                 <button
                   onClick={(e) => {
-                    e.stopPropagation(); // Prevent the card click from triggering
-                    handleDelete(resume._id); // Delete the resume
+                    e.stopPropagation(); // Prevents parent click (navigation)
+                    handleDelete(resume._id);
                   }}
                   className="text-red-500 hover:text-red-700"
                 >
                   <FaTrashAlt size={20} />
                 </button>
+
               </div>
               <p className="text-gray-600 truncate">
-                <strong>{resume.country || 'No summary available'}</strong> 
+                <strong>{resume.country || 'No summary available'}</strong>
               </p>
             </div>
           </div>
         ))}
       </div>
 
-      {resumes.length === 0 && (
-        <p className="text-gray-500 mt-4">No resumes found. Create one to see it here!</p>
+      {resumes.length > 0 ? (
+        <></>
+      ) : (
+        <p className="text-gray-500 mt-4">No Resume found. Create one to see it here!</p>
       )}
+
     </div>
   );
 };

@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 
 const ResumeTemplates = () => {
   // Fetch resume templates data from Redux store using the selector
+  useGetAllResumeTemplates();
   const { resumeTemplates } = useSelector((store) => store.templates);
   const dispatch = useDispatch();
   const navigate = useNavigate();
