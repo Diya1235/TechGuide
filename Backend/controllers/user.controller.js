@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cloudinary from "../config/cloudinary.js";
 import {WebsiteStat} from "../models/website.model.js";
-import { getDataUri } from "../utils/dataUri.js";
+
 
 export const register = async (req, res) => {
     try {
